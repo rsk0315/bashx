@@ -439,7 +439,8 @@ CSOURCES = shell.c eval.c parse.y general.c make_cmd.c print_cmd.c y.tab.c \
 	   input.c bashhist.c array.c arrayfunc.c assoc.c sig.c pathexp.c \
 	   unwind_prot.c siglist.c bashline.c bracecomp.c error.c \
 	   list.c stringlib.c locale.c findcmd.c redir.c \
-	   pcomplete.c pcomplib.c syntax.c xmalloc.c
+	   pcomplete.c pcomplib.c syntax.c xmalloc.c \
+	   spell_correction.c
 
 HSOURCES = shell.h flags.h trap.h hashcmd.h hashlib.h jobs.h builtins.h \
 	   general.h variables.h config.h $(ALLOC_HEADERS) alias.h \
@@ -448,6 +449,7 @@ HSOURCES = shell.h flags.h trap.h hashcmd.h hashlib.h jobs.h builtins.h \
 	   subst.h externs.h siglist.h bashhist.h bashline.h bashtypes.h \
 	   array.h arrayfunc.h sig.h mailcheck.h bashintl.h bashjmp.h \
 	   execute_cmd.h parser.h pathexp.h pathnames.h pcomplete.h assoc.h \
+	   spell_correction.h \
 	   $(BASHINCFILES)
 
 SOURCES	 = $(CSOURCES) $(HSOURCES) $(BUILTIN_DEFS)
@@ -480,7 +482,8 @@ OBJECTS	 = shell.o eval.o y.tab.o general.o make_cmd.o print_cmd.o $(GLOBO) \
 	   trap.o input.o unwind_prot.o pathexp.o sig.o test.o version.o \
 	   alias.o array.o arrayfunc.o assoc.o braces.o bracecomp.o bashhist.o \
 	   bashline.o $(SIGLIST_O) list.o stringlib.o locale.o findcmd.o redir.o \
-	   pcomplete.o pcomplib.o syntax.o xmalloc.o $(SIGNAMES_O)
+	   pcomplete.o pcomplib.o syntax.o xmalloc.o $(SIGNAMES_O) \
+	   spell_correction.o
 
 # Where the source code of the shell builtins resides.
 BUILTIN_SRCDIR=$(srcdir)/builtins
@@ -1012,7 +1015,8 @@ eval.o: shell.h syntax.h config.h bashjmp.h ${BASHINCDIR}/posixjmp.h command.h $
 eval.o: general.h xmalloc.h bashtypes.h variables.h arrayfunc.h conftypes.h array.h hashlib.h
 eval.o: quit.h ${BASHINCDIR}/maxpath.h unwind_prot.h dispose_cmd.h
 eval.o: make_cmd.h subst.h sig.h pathnames.h externs.h parser.h
-eval.o: input.h execute_cmd.h 
+eval.o: input.h execute_cmd.h
+eval.o: spell_correction.h
 execute_cmd.o: config.h bashtypes.h ${BASHINCDIR}/filecntl.h ${BASHINCDIR}/posixstat.h bashansi.h ${BASHINCDIR}/ansi_stdlib.h
 execute_cmd.o: shell.h syntax.h config.h bashjmp.h ${BASHINCDIR}/posixjmp.h command.h ${BASHINCDIR}/stdc.h error.h
 execute_cmd.o: general.h xmalloc.h bashtypes.h variables.h arrayfunc.h conftypes.h array.h hashlib.h
@@ -1236,6 +1240,8 @@ pcomplete.o: externs.h ${BASHINCDIR}/maxpath.h execute_cmd.h
 pcomplete.o: ${BASHINCDIR}/shmbutil.h ${BASHINCDIR}/shmbchar.h
 pcomplete.o: ${DEFDIR}/builtext.h
 
+spell_correction.o: command.h spell_correction.h
+
 # library support files
 
 bashhist.o: config.h bashtypes.h bashansi.h ${BASHINCDIR}/ansi_stdlib.h ${BASHINCDIR}/posixstat.h
@@ -1255,6 +1261,7 @@ bashline.o: builtins.h bashhist.h bashline.h execute_cmd.h findcmd.h pathexp.h
 bashline.o: $(DEFSRC)/common.h $(GLOB_LIBSRC)/glob.h alias.h
 bashline.o: pcomplete.h ${BASHINCDIR}/chartypes.h input.h
 bashline.o: ${BASHINCDIR}/shmbutil.h ${BASHINCDIR}/shmbchar.h
+bashline.o: spell_correction.h
 bracecomp.o: config.h bashansi.h ${BASHINCDIR}/ansi_stdlib.h
 bracecomp.o: shell.h syntax.h config.h bashjmp.h ${BASHINCDIR}/posixjmp.h
 bracecomp.o: command.h ${BASHINCDIR}/stdc.h error.h
@@ -1276,6 +1283,7 @@ y.tab.o: $(RL_LIBSRC)/readline.h $(RL_LIBSRC)/rlstdc.h
 subst.o: $(RL_LIBSRC)/keymaps.h $(RL_LIBSRC)/chardefs.h
 subst.o: $(RL_LIBSRC)/readline.h $(RL_LIBSRC)/rlstdc.h
 error.o: $(RL_LIBSRC)/rlconf.h
+eval.o: $(RL_LIBSRC)/rlconf.h
 builtins/exit.o: $(RL_LIBSRC)/rlconf.h
 
 shell.o: $(HIST_LIBSRC)/history.h $(HIST_LIBSRC)/rlstdc.h

@@ -129,6 +129,9 @@ extern char *dist_version, *release_status;
 extern int locale_mb_cur_max;
 extern int locale_utf8locale;
 
+/* bashline.c */
+extern int command_parsed;
+
 /* Structure to pass around that holds a bitmap of file descriptors
    to close, and the size of that structure.  Used in execute_cmd.c. */
 struct fd_bitmap {

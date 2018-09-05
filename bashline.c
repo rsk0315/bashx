@@ -57,6 +57,8 @@
 #include "trap.h"
 #include "flags.h"
 
+#include "spell_correction.h"
+
 #if defined (HAVE_MBSTR_H) && defined (HAVE_MBSCHR)
 #  include <mbstr.h>		/* mbschr */
 #endif
@@ -246,6 +248,9 @@ static int bash_vi_complete __P((int, int));
 #endif
 static int emacs_edit_and_execute_command __P((int, int));
 
+#if defined (SPELL_CORRECTION)
+static int smart_execute_command __P((int, int));
+#endif
 /* Non-zero once initalize_readline () has been called. */
 int bash_readline_initialized = 0;
 
@@ -469,6 +474,9 @@ initialize_readline ()
   rl_add_defun ("dynamic-complete-history", dynamic_complete_history, -1);
   rl_add_defun ("dabbrev-expand", bash_dabbrev_expand, -1);
 
+#if defined (SPELL_CORRECTION)
+  rl_add_defun ("smart-execute-command", smart_execute_command, -1);
+#endif
   /* Bind defaults before binding our custom shell keybindings. */
   if (RL_ISSTATE(RL_STATE_INITIALIZED) == 0)
     rl_initialize ();
@@ -565,6 +573,10 @@ initialize_readline ()
   rl_bind_key_in_map ('=', bash_vi_complete, vi_movement_keymap);
 #endif
 
+#if defined (SPELL_CORRECTION)
+  rl_bind_key_in_map (CTRL ('S'), smart_execute_command, emacs_meta_keymap);
+  rl_bind_key_in_map (CTRL ('M'), smart_execute_command, emacs_standard_keymap);
+#endif
   rl_completer_quote_characters = "'\"";
 
   /* This sets rl_completer_word_break_characters and rl_special_prefixes
@@ -4369,4 +4381,203 @@ bash_event_hook ()
   return 0;
 }
 
+#if defined (SPELL_CORRECTION)
+static char *previous_line;
+
+#ifdef COLOR_SUPPORT
+static const char *csi_bold = "\x1b[1m";
+static const char *csi_white = "\x1b[97m";
+static const char *csi_green = "\x1b[92m";
+static const char *csi_red = "\x1b[91m";
+static const char *csi_default = "\x1b[0m";
+#else
+static const char *csi_bold = "";
+static const char *csi_white = "";
+static const char *csi_green = "";
+static const char *csi_red = "";
+static const char *csi_default = "";
+#endif
+
+static const char *status_msg[] =
+  {
+   /* Status 127-- */
+   "(*'~')/ < Command not found? Check $PWD, $PATH, and permissions.",
+   "",
+   "(*'~')/ < Program received signal SIGHUP, Hangup.",
+
+   /* Status 13x */
+   "(*'~')/ < Program received signal SIGINT, Interrupt.",
+   "(*'~')/ < Program received signal SIGQUIT, Quit.",
+   "(*'~')/ < Program received signal SIGILL, Illegal instruction.",
+   "(*'~')/ < Program received signal SIGTRAP, Trace/breakpoint trap.",
+   "(*'~')/ < Program received signal SIGABRT, Aborted.",
+   "(*'~')/ < Program received signal SIGBUS, Bus error.",
+   "(*'~')/ < Program received signal SIGFPE, Arithmetic exception.",
+   "(*'~')/ < Program terminated with signal SIGKILL, Killed.",
+   "(*'~')/ < Program received signal SIGUSR1, User defined signal 1.",
+   "(*'~')/ < Program received signal SIGSEGV, Segmentation fault.",
+
+   /* Status 14x */
+   "(*'~')/ < Program received signal SIGUSR2, User defined signal 2.",
+   "(*'~')/ < Program received signal SIGPIPE, Broken pipe.",
+   "(*'~')/ < Program terminated with signal SIGALRM, Alarm clock.",
+   "(*'~')/ < Program received signal SIGTERM, Terminated.",
+   "(*'~')/ < Program received signal ?, Unknown signal.",
+   "(*'~')/ < ",
+   "(*'~')/ < Program received signal SIGCONT, Continued.",
+   "(*'~')/ < Program received signal SIGSTOP, Stopped (signal).",
+   "(*'~')/ < Program received signal SIGTSTP, Stopped (user).",
+   "(*'~')/ < Program received signal SIGTTIN, Stopped (tty input).",
+
+   /* Status 15x */
+   "(*'~')/ < Program received signal SIGTTOU, Stopped (tty output).",
+   "(*'~')/ < ",
+   "(*'~')/ < Program received signal SIGXCPU, CPU time limit exceeded.",
+   "(*'~')/ < Program received signal SIGXFSZ, File size limit exceeded.",
+   "(*'~')/ < Program terminated with signal SIGVTALRM, Virtual timer expired.",
+   "(*'~')/ < ",
+   "(*'~')/ < ",
+   "(*'~')/ < Program terminated with signal SIGIO, I/O possible.",
+   "(*'~')/ < Program received signal SIGPWR, Power fail/restart.",
+   "(*'~')/ < Program received signal SIGSYS, Bad system call.",
+  };
+
+#ifndef CORRECT_HOOK
+#  define CORRECT_HOOK "spell_correct_handle"
+#endif
+
+static int
+spell_correction ()
+{
+  if (previous_line == NULL || *previous_line == 0
+      || !command_parsed)
+    {
+      /* early return, but violating DRY */
+      FREE (previous_line);
+      previous_line = savestring ("");
+      rl_startup_hook = old_rl_startup_hook;
+      return 0;
+    }
+
+  if (last_command_exit_value != 127 || !needs_correction)
+    {
+      /* command found and executed */
+      if (last_command_exit_value == 0)
+        {
+          fprintf (stderr, "%s%s(*'-')b < Exited successfully%s\n",
+                   csi_default, csi_green, csi_default);
+          fflush (stderr);
+        }
+      else
+        {
+          fprintf (stderr, "%s%sexited with code %d\n",
+                   csi_default, csi_red, last_command_exit_value);
+
+          switch (last_command_exit_value)
+            {
+            case 1:
+              fprintf (stderr, "(*'~')/ < Something went wrong?");
+              break;
+            case 2:
+              fprintf (stderr, "(*'~')/ < Incorrect usage or some errors?");
+              break;
+            default:
+              if (127 <= last_command_exit_value
+                  && last_command_exit_value <= 159
+                  && *status_msg[last_command_exit_value-127])
+                {
+                  fprintf (stderr, status_msg[last_command_exit_value-127]);
+                }
+              else
+                {
+                  fprintf (stderr, "(*'~')oP < ... unusual status");
+                }
+            }
+          fprintf (stderr, "%s\n", csi_default);
+          fflush (stderr);
+        }
+    }
+  else
+    {
+      /* Take care of shell injections! */
+      SHELL_VAR *hookf;
+
+      hookf = find_function (CORRECT_HOOK);
+      if (hookf == 0 || command_to_check == 0)
+        {
+          fprintf (stderr, "%s%s%s%s\n",
+                   csi_default, csi_red, status_msg[0], csi_default);
+        }
+      else if (command_to_check->type == cm_simple)
+        {
+          /* 1. Calls function spell_correction_handle ()
+             2. Store its output into CORRECTED_COMMAND
+             3. Suggest it */
+
+          SIMPLE_COM *cm;
+          WORD_LIST *wl;
+          int r;
+
+          cm = command_to_check->value.Simple;
+          without_job_control ();
+#if defined (JOB_CONTROL)
+          set_sigchld_handler ();
+#endif
+
+          wl = copy_word_list (cm->words);
+          dispose_command (command_to_check);
+          command_to_check = 0;
+
+          wl = make_word_list (make_word (CORRECT_HOOK), wl);
+          r = execute_shell_function (hookf, wl);
+          if (r == 0)
+            {
+              /* yes */
+              SHELL_VAR *ccmd;
+
+              ccmd = find_variable ("CORRECTED_CMD");
+              FREE (push_to_readline);
+              push_to_readline = savestring (ccmd->value);
+              bash_push_line ();
+            }
+          else if (r == 1)
+            {
+              /* edit */
+              FREE (push_to_readline);
+              push_to_readline = savestring (previous_line);
+              bash_push_line ();
+            }
+          else if (r == 127)
+            {
+              /* no or not found */
+              fprintf (stderr, "%s%s%s%s\n",
+                       csi_default, csi_red, status_msg[0], csi_default);
+            }
+        }
+    }
+
+  FREE (previous_line);
+  previous_line = savestring ("");
+  rl_startup_hook = old_rl_startup_hook;
+  return 0;
+}
+
+static int
+smart_execute_command (count, c)
+     int count, c;
+{
+  int where;
+
+  FREE (previous_line);
+  previous_line = savestring (rl_line_buffer);
+  command_parsed = 0;
+  needs_correction = 1;
+
+  /* Accept the current line. */
+  rl_newline (1, c);
+
+  old_rl_startup_hook = rl_startup_hook;
+  rl_startup_hook = spell_correction;
+}
+#endif /* SPELL_CORRECTION */
 #endif /* READLINE */

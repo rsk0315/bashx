@@ -48,6 +48,9 @@
 #  include "bashhist.h"
 #endif
 
+#include "lib/readline/rlconf.h"
+#include "spell_correction.h"
+
 #if defined (HAVE_POSIX_SIGNALS)
 extern sigset_t top_level_mask;
 #endif
@@ -149,6 +152,24 @@ reader_loop ()
 	    {
 	      global_command = (COMMAND *)NULL;
 
+#if defined (SPELL_CORRECTION)
+              if (interactive)
+                {
+                  command_parsed = 1;
+
+                  /* debugging */
+                  /* inspect_command (current_command, 0, 0); */
+
+                  if (needs_correction && current_command->type == cm_simple)
+                    {
+                      command_to_check = copy_command (current_command);
+                    }
+
+#if defined (COLOR_SUPPORT)
+                  fprintf (stderr, "\x1b[0m");
+#endif
+                }
+#endif
 	      /* If the shell is interactive, expand and display $PS0 after reading a
 		 command (possibly a list or pipeline) and before executing it. */
 	      if (interactive && ps0_prompt)

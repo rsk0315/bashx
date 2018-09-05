@@ -303,6 +303,9 @@ static FILE *default_input;
 static STRING_INT_ALIST *shopt_alist;
 static int shopt_ind = 0, shopt_len = 0;
 
+#if 1 /* SPELL_CORRECTION */
+int command_parsed = 0;
+#endif
 static int parse_long_options __P((char **, int, int));
 static int parse_shell_options __P((char **, int, int));
 static int bind_args __P((char **, int, int, int));
