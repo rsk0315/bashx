@@ -152,9 +152,9 @@ reader_loop ()
 	    {
 	      global_command = (COMMAND *)NULL;
 
-#if defined (SPELL_CORRECTION)
               if (interactive)
                 {
+#if defined (SPELL_CORRECTION)
                   command_parsed = 1;
 
                   /* debugging */
@@ -164,12 +164,13 @@ reader_loop ()
                     {
                       command_to_check = copy_command (current_command);
                     }
+#endif
 
 #if defined (COLOR_SUPPORT)
                   fprintf (stderr, "\x1b[0m");
+                  fflush (stderr);
 #endif
                 }
-#endif
 	      /* If the shell is interactive, expand and display $PS0 after reading a
 		 command (possibly a list or pipeline) and before executing it. */
 	      if (interactive && ps0_prompt)
