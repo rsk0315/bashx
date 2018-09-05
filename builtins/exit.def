@@ -48,6 +48,8 @@ $END
 #include "common.h"
 #include "builtext.h"	/* for jobs_builtin */
 
+#include "../lib/readline/rlconf.h"
+
 extern int check_jobs_at_exit;
 
 static int exit_or_logout __P((WORD_LIST *));
@@ -118,9 +120,25 @@ exit_or_logout (list)
 	  stopmsg = JRUNNING;
 
       if (stopmsg == JSTOPPED)
-	fprintf (stderr, _("There are stopped jobs.\n"));
+        {
+#if defined (COLOR_SUPPORT)
+	  fprintf (stderr, "\x1b[01;31m");
+#endif
+	  fprintf (stderr, _("There are stopped jobs.\n"));
+#if defined (COLOR_SUPPORT)
+          fprintf (stderr, "\x1b[m");
+#endif
+        }
       else if (stopmsg == JRUNNING)
-	fprintf (stderr, _("There are running jobs.\n"));
+        {
+#if defined (COLOR_SUPPORT)
+	  fprintf (stderr, "\x1b[01;31m");
+#endif
+	  fprintf (stderr, _("There are running jobs.\n"));
+#if defined (COLOR_SUPPORT)
+          fprintf (stderr, "\x1b[m");
+#endif
+        }
 
       if (stopmsg && check_jobs_at_exit)
         list_all_jobs (JLIST_STANDARD);
