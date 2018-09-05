@@ -1,6 +1,11 @@
 # don't push out -i
 -i
 
+# backup files
+*~
+#*#
+.*.swp
+
 *.save
 .DS_Store
 .DS_Store?
