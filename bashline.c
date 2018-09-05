@@ -4537,8 +4537,17 @@ spell_correction ()
 
               ccmd = find_variable ("CORRECTED_CMD");
               FREE (push_to_readline);
-              push_to_readline = savestring (ccmd->value);
-              bash_push_line ();
+              if (ccmd == 0)
+                {
+                  /* in case */
+                  fprintf (stderr, "%s%s%s%s\n",
+                           csi_default, csi_red, status_msg[0], csi_default);
+                }
+              else
+                {
+                  push_to_readline = savestring (ccmd->value);
+                  bash_push_line ();
+                }
             }
           else if (r == 1)
             {
