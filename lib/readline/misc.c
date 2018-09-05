@@ -75,6 +75,15 @@ int _rl_history_saved_point = -1;
 /*								    */
 /* **************************************************************** */
 
+#if defined (COLOR_SUPPORT)
+const char *arg_fmt =
+  "\1\x1b[0m\2"
+  "(arg: \1\x1b[1;92m\2%d\1\x1b[0m\2) "
+  "\1\x1b[1m\2";
+#else
+const char *arg_fmt = "(arg: %d) ";
+#endif
+
 int
 _rl_arg_overflow (void)
 {
@@ -104,7 +113,7 @@ _rl_arg_getchar (void)
 {
   int c;
 
-  rl_message ("(arg: %d) ", rl_arg_sign * rl_numeric_arg);
+  rl_message (arg_fmt, rl_arg_sign * rl_numeric_arg);
   RL_SETSTATE(RL_STATE_MOREINPUT);
   c = rl_read_key ();
   RL_UNSETSTATE(RL_STATE_MOREINPUT);
@@ -233,7 +242,7 @@ rl_digit_argument (int ignore, int key)
   if (RL_ISSTATE (RL_STATE_CALLBACK))
     {
       _rl_arg_dispatch (_rl_argcxt, key);
-      rl_message ("(arg: %d) ", rl_arg_sign * rl_numeric_arg);
+      rl_message (arg_fmt, rl_arg_sign * rl_numeric_arg);
       return 0;
     }
   else
@@ -276,7 +285,7 @@ _rl_arg_callback (_rl_arg_cxt cxt)
 
   r = _rl_arg_dispatch (cxt, c);
   if (r > 0)
-    rl_message ("(arg: %d) ", rl_arg_sign * rl_numeric_arg);
+    rl_message (arg_fmt, rl_arg_sign * rl_numeric_arg);
   return (r != 1);
 }
 
