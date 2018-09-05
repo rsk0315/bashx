@@ -1722,6 +1722,9 @@ display_matches (char **matches)
 
   len = i - 1;
 
+#if defined (COLOR_SUPPORT)
+  _rl_prep_non_filename_text ();
+#endif
   /* If the caller has defined a display hook, then call that now. */
   if (rl_completion_display_matches_hook)
     {
