@@ -168,6 +168,10 @@ rl_display_search (char *search_string, int flags, int where)
     }
 #endif /* NOTDEF */
 
+#if defined (COLOR_SUPPORT)
+  strcpy (message + msglen, "\1\x1b[0m\2");
+  msglen += 6;
+#endif
   message[msglen++] = '(';
 
   if (flags & SF_FAILED)
@@ -187,11 +191,31 @@ rl_display_search (char *search_string, int flags, int where)
 
   if (search_string)
     {
+#if defined (COLOR_SUPPORT)
+      if (flags & SF_FAILED)
+        {
+          strcpy (message + msglen, "\1\x1b[1;31m\2");
+          msglen += 9;
+        }
+      else
+        {
+          strcpy (message + msglen, "\1\x1b[1m\2");
+          msglen += 6;
+        }
+#endif
       strcpy (message + msglen, search_string);
       msglen += searchlen;
+#if defined (COLOR_SUPPORT)
+      strcpy (message + msglen, "\1\x1b[0m\2");
+      msglen += 6;
+#endif
     }
 
   strcpy (message + msglen, "': ");
+#if defined (COLOR_SUPPORT)
+  msglen += 3;
+  strcpy (message + msglen, "\1\x1b[1m\2");
+#endif
 
   rl_message ("%s", message);
   xfree (message);
