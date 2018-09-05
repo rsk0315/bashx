@@ -52,6 +52,8 @@ extern int errno;
 #  include "bashhist.h"
 #endif
 
+#include "lib/readline/rlconf.h"
+
 extern int executing_line_number __P((void));
 
 #if defined (JOB_CONTROL)
@@ -342,7 +344,13 @@ parser_error (lineno, format, va_alist)
   iname = yy_input_name ();
 
   if (interactive)
-    fprintf (stderr, "%s: ", ename);
+    {
+#if defined (COLOR_SUPPORT)
+      fprintf (stderr, "\x1b[01;31m%s: ", ename);
+#else
+      fprintf (stderr, "%s: ", ename);
+#endif
+    }
   else if (interactive_shell)
     fprintf (stderr, "%s: %s:%s%d: ", ename, iname, gnu_error_format ? "" : _(" line "), lineno);
   else if (STREQ (ename, iname))
@@ -353,6 +361,9 @@ parser_error (lineno, format, va_alist)
   SH_VA_START (args, format);
 
   vfprintf (stderr, format, args);
+#if defined (COLOR_SUPPORT)
+  fprintf (stderr, "\x1b[m");
+#endif
   fprintf (stderr, "\n");
 
   va_end (args);
