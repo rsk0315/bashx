@@ -1280,6 +1280,7 @@ bracecomp.o: $(RL_LIBSRC)/keymaps.h $(RL_LIBSRC)/chardefs.h
 bracecomp.o: $(RL_LIBSRC)/readline.h $(RL_LIBSRC)/rlstdc.h
 y.tab.o: $(RL_LIBSRC)/keymaps.h $(RL_LIBSRC)/chardefs.h
 y.tab.o: $(RL_LIBSRC)/readline.h $(RL_LIBSRC)/rlstdc.h
+y.tab.o: $(RL_LIBSRC)/rlconf.h
 subst.o: $(RL_LIBSRC)/keymaps.h $(RL_LIBSRC)/chardefs.h
 subst.o: $(RL_LIBSRC)/readline.h $(RL_LIBSRC)/rlstdc.h
 error.o: $(RL_LIBSRC)/rlconf.h

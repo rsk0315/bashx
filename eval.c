@@ -48,7 +48,7 @@
 #  include "bashhist.h"
 #endif
 
-#include "lib/readline/rlconf.h"
+#include <readline/rlconf.h>
 #include "spell_correction.h"
 
 #if defined (HAVE_POSIX_SIGNALS)

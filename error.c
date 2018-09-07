@@ -52,7 +52,7 @@ extern int errno;
 #  include "bashhist.h"
 #endif
 
-#include "lib/readline/rlconf.h"
+#include <readline/rlconf.h>
 
 extern int executing_line_number __P((void));
 
