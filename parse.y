@@ -61,6 +61,7 @@
 #if defined (READLINE)
 #  include "bashline.h"
 #  include <readline/readline.h>
+#  include <readline/rlconf.h>
 #endif /* READLINE */
 
 #if defined (HISTORY)
@@ -225,7 +226,7 @@ char *primary_prompt = PPROMPT;
 char *secondary_prompt = SPROMPT;
 
 /* PROMPT_STRING_POINTER points to one of these, never to an actual string. */
-char *ps1_prompt, *ps2_prompt;
+char *ps1_prompt = 0, *ps2_prompt = 0;
 
 /* Displayed after reading a command but before executing it in an interactive shell */
 char *ps0_prompt;
@@ -5551,12 +5552,53 @@ static void
 prompt_again ()
 {
   char *temp_prompt;
+#if defined (COLOR_SUPPORT)
+  char *pmt;
+#endif
 
   if (interactive == 0 || expanding_alias ())	/* XXX */
     return;
 
+#if defined (COLOR_SUPPORT)
+  {
+    int ps1_len;
+    char *ps1_value;
+
+    FREE (ps1_prompt);
+    ps1_value = get_string_value ("PS1");
+    ps1_len = 0;
+    ps1_prompt = (char *)xmalloc (strlen (ps1_value) + 64);
+    if (ps1_value && *ps1_value)
+      {
+        strcpy (ps1_prompt + ps1_len, "\1\x1b[0m\2");
+        ps1_len += 6;
+        strcpy (ps1_prompt + ps1_len, ps1_value);
+        ps1_len += strlen (ps1_value);
+      }
+    strcpy (ps1_prompt + ps1_len, "\1\x1b[01m\2");
+  }
+  {
+    /* XXX DRY */
+    int ps2_len;
+    char *ps2_value;
+
+    FREE (ps2_prompt);
+    ps2_value = get_string_value ("PS2");
+    ps2_len = 0;
+    ps2_prompt = (char *)xmalloc (strlen (ps2_value) + 64);
+    if (ps2_value && *ps2_value)
+      {
+        strcpy (ps2_prompt + ps2_len, "\1\x1b[0m\2");
+        ps2_len += 6;
+        strcpy (ps2_prompt + ps2_len, ps2_value);
+        ps2_len += strlen (ps2_value);
+      }
+    strcpy (ps2_prompt + ps2_len, "\1\x1b[01m\2");
+  }
+#else /* COLOR_SUPPORT */
   ps1_prompt = get_string_value ("PS1");
   ps2_prompt = get_string_value ("PS2");
+#endif
 
   ps0_prompt = get_string_value ("PS0");
 
@@ -5607,7 +5649,13 @@ set_current_prompt_level (x)
 static void
 print_prompt ()
 {
+#if defined (COLOR_SUPPORT)
+  fprintf (stderr, "\x1b[0m");
+#endif
   fprintf (stderr, "%s", current_decoded_prompt);
+#if defined (COLOR_SUPPORT)
+  fprintf (stderr, "\x1b[1m");
+#endif
   fflush (stderr);
 }
 
