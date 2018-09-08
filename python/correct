@@ -1,0 +1,266 @@
+#! /usr/bin/env python3
+
+import os
+import re
+import sys
+from functools import reduce
+
+import termios
+import tty
+
+
+def get_all_executables(path_str=None):
+    if path_str is None:
+        path_str = os.environ['PATH']
+
+    # /usr/bin/ is equivalent to /usr/bin
+    # PATH ':foo', 'foo:' and 'foo::bar' contain current directory
+    path = [os.path.realpath(d.rstrip('/') or '.')
+            for d in path_str.split(':')]
+    # Remove duplications
+    path = [d for i, d in enumerate(path) if path.index(d) == i]
+
+    for d in path:
+        for f in os.listdir(d):
+            if os.access(os.path.join(d, f), os.X_OK):
+                yield f
+
+
+def len_lcs(s, t):
+    dp = [[0 for j in range(len(t)+1)] for i in range(len(s)+1)]
+    for i, c, in enumerate(s):
+        for j, d in enumerate(t):
+            if c == d:
+                dp[i+1][j+1] = dp[i][j] + 1
+            else:
+                dp[i+1][j+1] = max(dp[i+1][j], dp[i][j+1])
+
+    return dp[-1][-1]
+
+
+def one_slide(exists, wrong):
+    # We accept 'pthyon', but reject 'tphony' as 'python'.
+    # Returns `True` if we move one character in `wrong` somewhere,
+    # which is same as exists one.
+    # Is there a fast algorithm for this?
+
+    if exists == wrong:
+        return True  # or False, decide in later version
+
+    # 'somewhere' excludes a BLACKHOLE
+    if len(exists) != len(wrong):
+        return False
+
+    # if the number of each characters, this cannot be True
+    if sorted(exists) != sorted(wrong):
+        return False
+
+    # We can do it in O(nm) time, where n, m are the length of strings.
+    # 1. find the longest common subsequence of `exists` and `wrong`
+    # 2. if its length plus one is the length of `exists` returns True
+    # 3. returns False
+    return len_lcs(exists, wrong) + 1 == len(exists)
+
+
+def split_long_option(longopt):
+    # split '--xyz-a-b' into '--xyz-a -b' and '--xyz -a -b'
+    # but '--xyz-ab' does not yield '--xyz-a -b'
+
+    short_prog = re.compile(r'-[^-]+')
+    res = []
+    m = short_prog.search(longopt, pos=2)  # for '--'
+    while m is not None:
+        s, e = m.span()
+        res.append(longopt[:s]+' '+' '.join(short_prog.findall(longopt[s:])))
+        pos = e
+        m = short_prog.search(longopt, pos=e)
+    else:
+        res.append(longopt)
+
+    return res
+
+
+def split_options(exists, wrong):
+    # split expected-to-option component from `wrong`
+    # This could yield more than one candidates
+    # Examples:
+    # - foo- => ['foo']
+    # - foox, bar => []  (if `exists` == 'foo')
+    # - foo-x => ['foo -x']
+    # - foo-xy => ['foo -xy']
+    # - foo-xy-ab => ['foo -xy -ab'], not 'foo -xy-ab'
+    # - foo-x--xyz => ['foo-x --xyz', 'foo -x -xyz']
+    # - foo--xyz-x => ['foo--xyz -x', 'foo--xyz-x', 'foo --xyz -x'],
+    #                 neither 'foo -- xyz-x', nor 'foo -- xyz -x'
+    # - foo--xy--ab => ['foo --xy --ab', 'foo--xy --ab'],
+    #                  not 'foo --xy--ab'
+    # - foo--xy-a-b => ['foo --xy-a-b', ...]
+
+    # '--xy-a-b-c' yields '--xy -a -b -c', '--xy-a -b -c', '--xy-a-b -c'
+    # and itself.
+    # This could take exponential time in the length of `wrong`.  In
+    # addition the time for manipulating strings.
+
+    if not wrong.startswith(exists):
+        return []
+
+    len_ = len(exists)
+    if wrong[len_:len_+1] != '-':
+        # avoiding `IndexError`
+        return []
+
+    if '---' in wrong:
+        # XXX may not follow Unix option styles
+        return []
+
+    opt_prog = re.compile(r'--[^-]+(?:-[^-]+)*|-[^-]+')
+    cmd, opts = wrong[:len_], wrong[len_:]
+    opts = opt_prog.findall(opts)
+    opts = [split_long_option(o) if o.startswith('--') else [o]
+            for o in opts]
+
+    return reduce(
+        lambda xs, ys: [x+' '+y for x in xs for y in ys], opts, [cmd]
+    )
+
+################################################
+def getch():
+    fd = sys.stdin.fileno()
+    old = termios.tcgetattr(fd)
+    try:
+        tty.setraw(fd)
+        return sys.stdin.read(1)
+    finally:
+        termios.tcsetattr(fd, termios.TCSADRAIN, old)
+
+def get_key():
+    ch = getch()
+
+    if ch == '\x1b':
+        next_ch = getch()
+        if next_ch == '[':
+            last_ch = getch()
+            return '\x1b[' + last_ch
+
+    return ch
+
+def get_key_until(keys):
+    k = get_key()
+    while k not in keys:
+        k = get_key()
+
+    return k
+################################################
+
+def ask_single(candidate):
+    print(
+        '{default}CORRECT: {q0}{bold}{com}{default}{q1} (y|n|e)?'.format(
+            q0=b'\xe2\x80\x98'.decode(), q1=b'\xe2\x80\x99'.decode(),
+            default='\x1b[0m', bold='\x1b[1m', com=candidate
+        ), end=' ', flush=True, file=sys.stderr
+    )
+
+    k = get_key_until(('y', 'n', 'e', 'Y', 'N', 'E', '\003')).lower()
+    if k == 'y':
+        print(
+            '{default}{bold}{green}yes{default}'.format(
+                default='\x1b[0m', bold='\x1b[1m', green='\x1b[32m'
+            ), flush=True, file=sys.stderr
+        )
+        print(candidate)
+        return 0
+    elif k == 'n':
+        print(
+            '{default}{bold}{red}no{default}'.format(
+                default='\x1b[0m', bold='\x1b[1m', red='\x1b[31m'
+            ), flush=True, file=sys.stderr
+        )
+        return 127
+    elif k == 'e':
+        print(
+            '{default}{bold}edit{default}'.format(
+                default='\x1b[0m', bold='\x1b[1m'
+            ), flush=True, file=sys.stderr
+        )
+        return 1
+    elif k == '\003':
+        print(
+            '{default}{bold}{red}abort{default}'.format(
+                default='\x1b[0m', bold='\x1b[1m', red='\x1b[31m'
+            ), flush=True, end='', file=sys.stderr
+        )
+        raise KeyboardInterrupt
+
+
+def ask_multiple(candidates):
+    n = len(candidates)
+    width = len(str(n))
+    print('\x1b[0m', end='', file=sys.stderr)
+    for i, candidate in enumerate(candidates, 1):
+        print('{:{}}) {}'.format(i, width, candidate), file=sys.stderr)
+
+    i = 0
+    while not 1 <= i <= n:
+        print('#?', end=' \x1b[1m', flush=True, file=sys.stderr)
+        try:
+            i = int(input())
+        except ValueError:
+            i = 0
+
+    print(candidates[i-1])
+    return 0
+
+
+def confirm(candidates):
+    if not candidates:
+        return 127
+
+    if len(candidates) == 1:
+        # CORRECT: *foo ...* (y|n|e)?
+        return ask_single(candidates[0])
+
+    # 1) foo ...
+    # 2) bar ...
+    # #? 
+    return ask_multiple(candidates)
+
+
+def main():
+    # $ this.py [option ...] [--] command [argument ...]
+    # argument shall not contain options to this.py.
+    # If command is -- and end-of-option marker (--) is not provided,
+    # this may fail.  It is an inevitable constraint.
+    # Note: this is a correcting program; we cannot assume the arguments
+    #       are well-behaved.
+
+    # XXX see above
+    com, args = sys.argv[1], sys.argv[2:]
+
+    # FIXME shell-unquote of `com`?
+
+    candidates = set()
+    for x in get_all_executables():
+        x = os.path.basename(x)
+
+        if one_slide(x, com):
+            candidates.add(' '.join([x]+args))
+
+        for xi in split_options(x, com):
+            candidates.add(' '.join([xi]+args))
+
+        if args and args[0]:
+            if x == com + args[0][0]:
+                candidates.add(
+                    ' '.join([x+' '+args[0][1:]]+args[1:])
+                )
+
+    candidates = sorted(candidates)
+    try:
+        return confirm(candidates)
+    except KeyboardInterrupt:
+        print(file=sys.stderr)
+        return 127
+
+
+if __name__ == '__main__':
+    sys.exit(main())
