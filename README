@@ -109,3 +109,22 @@ Copying and distribution of this file, with or without modification,
 are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
+
+Added Features
+==============
+
+Command correction
+------------------
+
+When a command is not found, after calling `command_not_found_handle`,
+it calls `spell_correct_handle`.  To correct commands, the function
+shall store correct one into `CORRECT_CMD` and return `0`.  To ignore
+corection, it shall return `1` for re-editing and `127` for aborting.
+
+Sample of `command_not_found_handle`:
+
+```
+spell_correct_handle () { CORRECTED_CMD=$(correct "$@"); }
+```
+
+For the implementation of `correct`, see `python/correct`
