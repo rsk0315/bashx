@@ -4521,9 +4521,11 @@ spell_correction ()
           int r;
 
           cm = command_to_check->value.Simple;
+#if 0 /* ??? */
           without_job_control ();
-#if defined (JOB_CONTROL)
+#  if defined (JOB_CONTROL)
           set_sigchld_handler ();
+#  endif
 #endif
 
           wl = copy_word_list (cm->words);
