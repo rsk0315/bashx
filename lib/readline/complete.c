@@ -1700,6 +1700,9 @@ display_matches (char **matches)
     {
       temp = printable_part (matches[0]);
       rl_crlf ();
+#if defined (COLOR_SUPPORT)
+      _rl_prep_non_filename_text ();
+#endif
       print_filename (temp, matches[0], 0);
       rl_crlf ();
 
