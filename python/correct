@@ -62,6 +62,13 @@ def one_slide(exists, wrong):
     return len_lcs(exists, wrong) + 1 == len(exists)
 
 
+def one_char(exists, wrong):
+    if abs(len(exists)-len(wrong)) != 1:
+        return False
+
+    return len_lcs(exists, wrong) + 1 in map(len, (exists, wrong))
+
+
 def split_long_option(longopt):
     # split '--xyz-a-b' into '--xyz-a -b' and '--xyz -a -b'
     # but '--xyz-ab' does not yield '--xyz-a -b'
@@ -165,18 +172,22 @@ def get_integer():
     # in { $(correct); } environment, input() does not work.
     # I do not know this solution is good.
     buf = ''
-    k = get_key_until('0123456789\r\n\b\x7f')
+    k = get_key_until('0123456789\r\n\b\x7f\003')
     while not (buf and k in '\r\n'):
         if k in '\b\x7f':
-            buf = buf[:-1]
-            print('\b \b', end='', file=sys.stderr, flush=True)
+            if buf:
+                buf = buf[:-1]
+                print('\b \b', end='', file=sys.stderr, flush=True)
         elif k in '\r\n':
             pass
+        elif k == '\003':
+            print('^C', end='', file=sys.stderr, flush=True)
+            raise KeyboardInterrupt
         else:
             buf += k
             print(k, end='', file=sys.stderr, flush=True)
 
-        k = get_key_until('0123456789\r\n\b\x7f')
+        k = get_key_until('0123456789\r\n\b\x7f\003')
 
     print(file=sys.stderr, flush=True)
     return int(buf)       
@@ -271,6 +282,9 @@ def main():
         x = os.path.basename(x)
 
         if one_slide(x, com):
+            candidates.add(' '.join([x]+args))
+
+        if one_char(x, com):
             candidates.add(' '.join([x]+args))
 
         for xi in split_options(x, com):
