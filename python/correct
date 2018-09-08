@@ -128,7 +128,7 @@ def change_digits(exists, wrong):
     if len(exists) != len(wrong):
         return False
 
-    wrong = wrong.replace('[][^$(){}+*?.\\|]', r'\\\g<1>')
+    wrong = re.sub('([][^$(){}+*?.\\|])', r'\\\g<1>', wrong)
     wrong = re.sub(r'\d', r'\\d', wrong)
     if re.match(wrong, exists):
         return True
