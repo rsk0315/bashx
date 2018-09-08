@@ -4505,6 +4505,8 @@ spell_correction ()
       hookf = find_function (CORRECT_HOOK);
       if (hookf == 0 || command_to_check == 0)
         {
+          fprintf (stderr, "%s%sexited with code 127\n",
+                   csi_default, csi_red, csi_default);
           fprintf (stderr, "%s%s%s%s\n",
                    csi_default, csi_red, status_msg[0], csi_default);
         }
@@ -4540,6 +4542,8 @@ spell_correction ()
               if (ccmd == 0)
                 {
                   /* in case */
+                  fprintf (stderr, "%s%sexited with code 127\n",
+                           csi_default, csi_red, csi_default);
                   fprintf (stderr, "%s%s%s%s\n",
                            csi_default, csi_red, status_msg[0], csi_default);
                 }
@@ -4559,6 +4563,8 @@ spell_correction ()
           else if (r == 127)
             {
               /* no or not found */
+              fprintf (stderr, "%s%sexited with code 127\n",
+                       csi_default, csi_red, csi_default);
               fprintf (stderr, "%s%s%s%s\n",
                        csi_default, csi_red, status_msg[0], csi_default);
             }
