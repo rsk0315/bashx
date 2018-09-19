@@ -21,6 +21,9 @@ def get_all_executables(path_str=None):
     path = [d for i, d in enumerate(path) if path.index(d) == i]
 
     for d in path:
+        if not os.path.exists(d):
+            continue
+
         for f in os.listdir(d):
             if os.access(os.path.join(d, f), os.X_OK):
                 yield f
