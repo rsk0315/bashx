@@ -65,18 +65,35 @@ def one_slide(exists, wrong):
     return len_lcs(exists, wrong) + 1 == len(exists)
 
 
-def one_char_add(exists, wrong):
-    if len(exists) != len(wrong) + 1:
+# def one_char_add(exists, wrong):
+#     if len(exists) != len(wrong) + 1:
+#         return False
+
+#     return len_lcs(exists, wrong) == len(wrong)
+
+# def one_char_remove(exists, wrong):
+#     if len(exists) + 1 != len(wrong):
+#         return False
+
+#     return len_lcs(exists, wrong) == len(exists)
+
+# def one_char_change(exists, wrong):
+#     if len(exists) != len(wrong):
+#         return False
+
+#     return len_lcs(exists, wrong) == len(exists)
+
+def one_char_diff(exists, wrong):
+    len_exists, len_wrong = map(len, (exists, wrong))
+    if not -1 <= len_exists-len_wrong <= 1:
         return False
 
-    return len_lcs(exists, wrong) == len(wrong)
+    len_lcs_ = len_lcs(exists, wrong)
+    if len_exists == len_wrong and len_lcs_ >= len(exists)-1:
+        if len([0 for c, d in zip(exists, wrong) if c == d]) == len(exists)-1:
+            return True
 
-def one_char_remove(exists, wrong):
-    if len(exists) + 1 != len(wrong):
-        return False
-
-    return len_lcs(exists, wrong) == len(exists)
-
+    return len_lcs_ == min(len(exists), len(wrong))
 
 def split_long_option(longopt):
     # split '--xyz-a-b' into '--xyz-a -b' and '--xyz -a -b'
@@ -293,10 +310,16 @@ def main():
         if one_slide(x, com):
             candidates.add(' '.join([x]+args))
 
-        if one_char_add(x, com):
-            candidates.add(' '.join([x]+args))
+        # if one_char_add(x, com):
+        #     candidates.add(' '.join([x]+args))
 
-        if one_char_remove(x, com):
+        # if one_char_remove(x, com):
+        #     candidates.add(' '.join([x]+args))
+
+        # if one_char_change(x, com):
+        #     candidates.add(' '.join([x]+args))
+
+        if one_char_diff(x, com):
             candidates.add(' '.join([x]+args))
 
         for xi in split_options(x, com):
@@ -311,9 +334,12 @@ def main():
                     ' '.join([x+' '+args[0][1:]]+args[1:])
                 )
 
-        if x == com[:-1] and args:
-            tmp = com[-1] + args[0]
-            candidates.add(' '.join([x+' '+tmp]+args[1:]))
+        if x == com[:-1]:
+            if args:
+                tmp = com[-1] + args[0]
+                candidates.add(' '.join([x+' '+tmp]+args[1:]))
+            else:
+                candidates.add(x+' '+com[-1])
 
     candidates = sorted(candidates)
     try:
