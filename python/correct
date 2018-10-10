@@ -215,7 +215,7 @@ def ask_single(candidate):
     if k == 'y':
         print(
             '{default}{bold}{green}yes{default}'.format(
-                default='\x1b[0m', bold='\x1b[1m', green='\x1b[32m'
+                default='\x1b[0m', bold='\x1b[1m', green='\x1b[92m'
             ), flush=True, file=sys.stderr
         )
         print(candidate)
@@ -223,7 +223,7 @@ def ask_single(candidate):
     elif k == 'n':
         print(
             '{default}{bold}{red}no{default}'.format(
-                default='\x1b[0m', bold='\x1b[1m', red='\x1b[31m'
+                default='\x1b[0m', bold='\x1b[1m', red='\x1b[91m'
             ), flush=True, file=sys.stderr
         )
         return 127
@@ -237,7 +237,7 @@ def ask_single(candidate):
     elif k == '\003':
         print(
             '{default}{bold}{red}abort{default}'.format(
-                default='\x1b[0m', bold='\x1b[1m', red='\x1b[31m'
+                default='\x1b[0m', bold='\x1b[1m', red='\x1b[91m'
             ), flush=True, end='', file=sys.stderr
         )
         raise KeyboardInterrupt
