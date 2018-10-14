@@ -313,7 +313,7 @@ def main():
         )
         if x == com:
             print('\x1b[2K', file=sys.stderr, flush=True, end='')
-            return 1
+            return 127
 
         if one_slide(x, com):
             candidates.add(' '.join([x]+args))
