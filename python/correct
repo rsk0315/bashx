@@ -277,6 +277,7 @@ def ask_multiple(candidates):
 
 
 def confirm(candidates):
+    print('\x1b[2K', file=sys.stderr, flush=True, end='')
     if not candidates:
         return 127
 
@@ -304,8 +305,15 @@ def main():
     # FIXME shell-unquote of `com`?
 
     candidates = set()
-    for x in get_all_executables():
+    for i, x in enumerate(get_all_executables(), 1):
         x = os.path.basename(x)
+        print(
+            f'{i} candidate{"s" if i > 1 else ""} checked',
+            file=sys.stderr, flush=True, end='\r'
+        )
+        if x == com:
+            print('\x1b[2K', file=sys.stderr, flush=True, end='')
+            return 1
 
         if one_slide(x, com):
             candidates.add(' '.join([x]+args))
